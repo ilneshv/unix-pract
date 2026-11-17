@@ -1,0 +1,73 @@
+#!/bin/bash
+
+print_usage() {
+    echo "Usage: userhome [-f file] [username]"
+    echo "Find the home directory of a user from /etc/passwd or a specified file."
+    echo ""
+    echo "Options:"
+    echo "  -f file    Specify an alternative passwd file (default: /etc/passwd)"
+    echo "  --help     Display this help message"
+    echo "  --usage    Display usage information"
+}
+
+
+file="/etc/passwd"
+username=""
+file_set=false
+
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --help|--usage)
+            print_usage
+            exit 0
+            ;;
+        -f)
+            if [ "$file_set" = true ] || [ -z "$2" ]; then
+                print_usage >&2
+                exit 1
+            fi
+            file="$2"
+            file_set=true
+            shift 2
+            ;;
+        -*)
+            print_usage >&2
+            exit 1
+            ;;
+        *)
+            if [ -n "$username" ]; then
+                print_usage >&2
+                exit 1
+            fi
+            username="$1"
+            shift
+            ;;
+    esac
+done
+
+
+if [ -z "$username" ]; then
+    username=$(whoami)
+fi
+
+if [ ! -f "$file" ]; then
+    echo "Error: File '$file' not found." >&2
+    exit 2
+fi
+
+
+user_line=$(grep -E "^${username}:" "$file")
+
+
+if [ -z "$user_line" ]; then
+    echo "Error: User '$username' not found in '$file'." >&2
+    exit 1
+fi
+
+
+home_dir=$(echo "$user_line" | cut -d':' -f6)
+
+
+echo "$home_dir"
+exit 0
