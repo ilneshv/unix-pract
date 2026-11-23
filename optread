@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+endofopt=0
+
+for k in "$@"; do
+
+    if [ "$endofopt" -eq 0 ] && [[ "$k" == "--" ]]; then
+        endofopt=1
+        continue
+    fi
+
+    if [ "$endofopt" -eq 0 ] && [[ "$k" == -* ]] && [[ "$k" != - ]] && [[ "$k" != --* ]]; then
+        for (( t=1; t<${#k}; t++ )); do
+            char="${k:t:1}"
+
+            case "$char" in
+                a)
+                    echo "Option active: -a"
+                    ;;
+                b)
+                    if [ ${ALLOW_B:-0} -eq 1 ]; then
+                        echo "Option active: -b"
+                    else
+                        echo "Error: Unsupported option: -$char" >&2
+                        exit 1
+                    fi
+                    ;;
+                c)
+                    echo "Option active: -c"
+                    ;;
+                *)
+                    echo "Error: Unsupported option: -$char" >&2
+                    exit 1
+                    ;;
+            esac
+        done
+    else
+        echo "Non-optional found: $k"
+    fi
+done
