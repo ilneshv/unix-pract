@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+
+verbose=false
+dry_run=false
+days=""
+dirs=()
+end_of_opts=false
+
+usage() {
+    echo "Usage: ./delolder [-v|-d] N [--] dirs" >&2
+    echo "	    -v : verbose" >&2
+    echo "	    -d : dry run" >&2
+    echo "	    -u : usage" >&2
+    exit 1
+}
+
+
+while [[ $# -gt 0 ]]; do
+    arg="$1"
+    if [[ "$end_of_opts" == true ]]; then
+        dirs+=("$arg")
+    elif [[ "$arg" == "--" ]]; then
+        end_of_opts=true
+    elif [[ "$arg" == -* ]]; then
+        case "$arg" in
+            -v) verbose=true ;;
+            -d) dry_run=true ;;
+	    -u) usage ;;
+            *)
+                echo "Error: Unknown '$arg'" >&2
+                usage
+                ;;
+        esac
+    else
+        if [[ -z "$days" ]]; then
+            if ! [[ "$arg" =~ ^[0-9]+$ ]]; then
+                echo "Error: Days need to be an integer, but found '$arg'" >&2
+                usage
+            fi
+            days="$arg"
+        else
+            dirs+=("$arg")
+        fi
+    fi
+    shift
+done
+
+if [[ -z "$days" ]] || [[ ${#dirs[@]} -eq 0 ]]; then
+    echo "Error: Days and directory needed." >&2
+    usage
+fi
+
+valid_dirs=()
+for dir in "${dirs[@]}"; do
+    if [[ "$dir" == -* ]]; then
+        dir="./$dir"
+    fi
+
+    if [[ -d "$dir" ]]; then
+        valid_dirs+=("$dir")
+    else
+        echo "Error: Directory '$dir' is not found." >&2
+        exit 1
+    fi
+done
+
+find_actions=()
+
+if [[ "$dry_run" == true ]]; then
+    find_actions+=(-print)
+else
+    if [[ "$verbose" == true ]]; then
+        find_actions+=(-print)
+    fi
+    find_actions+=(-delete)
+fi
+
+
+find "${valid_dirs[@]}" -type f -mtime +"$days" "${find_actions[@]}"
